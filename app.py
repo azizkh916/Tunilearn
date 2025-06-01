@@ -1,3 +1,12 @@
+import nltk
+nltk.data.path.append("./nltk_data")  # for Render or offline use
+
+# Optionnel : pour Render uniquement, télécharger au runtime si nécessaire (mais lent)
+try:
+    nltk.data.find('tokenizers/punkt')
+except LookupError:
+    nltk.download('punkt', download_dir='./nltk_data')
+
 import os
 import re
 import nltk
