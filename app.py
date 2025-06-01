@@ -1,10 +1,21 @@
+import nltk
+nltk.download("punkt")
+nltk.download("stopwords")
+
 from flask import Flask, request, render_template, send_file
+import os
 import io
 import fitz  # PyMuPDF
 from fpdf import FPDF
+from sumy.parsers.plaintext import PlaintextParser
+from sumy.nlp.tokenizers import Tokenizer
+from sumy.summarizers.lsa import LsaSummarizer
+from sumy.nlp.stemmers import Stemmer
+from sumy.utils import get_stop_words
 
 app = Flask(__name__)
 
+LANGUAGE = "french"
 latest_summary_pdf = None
 
 def extract_text_from_pdf(pdf_file):
@@ -14,25 +25,23 @@ def extract_text_from_pdf(pdf_file):
             text += page.get_text()
     return text
 
-# Résumé basique sans NLTK / Sumy (évite erreur de tokenizer)
 def summarize_text(text, sentence_count=5):
-    sentences = text.replace('\n', ' ').split('. ')
-    summary_sentences = sentences[:sentence_count]
-    summary = '. '.join(summary_sentences)
-    if not summary.endswith('.'):
-        summary += '.'
-    return summary
+    parser = PlaintextParser.from_string(text, Tokenizer(LANGUAGE))
+    stemmer = Stemmer(LANGUAGE)
+    summarizer = LsaSummarizer(stemmer)
+    summarizer.stop_words = get_stop_words(LANGUAGE)
+    summary = summarizer(parser.document, sentence_count)
+    return "\n".join(str(sentence) for sentence in summary)
 
 def create_pdf(summary_text):
     pdf = FPDF()
     pdf.add_page()
-    pdf.set_font('Arial', '', 12)
+    # S'assurer que DejaVuSans.ttf est dans le dossier du script
+    pdf.add_font('DejaVu', '', 'DejaVuSans.ttf', uni=True)
+    pdf.set_font('DejaVu', '', 12)
     for line in summary_text.split("\n"):
         pdf.multi_cell(0, 10, line)
-    
-    # Générer le contenu du PDF sous forme de bytes
-    pdf_bytes = pdf.output(dest='S').encode('latin1')
-    
+    pdf_bytes = pdf.output(dest='S').encode('utf-8')
     output = io.BytesIO(pdf_bytes)
     output.seek(0)
     return output
@@ -40,12 +49,12 @@ def create_pdf(summary_text):
 @app.route('/', methods=['GET', 'POST'])
 def index():
     summary = None
-    global latest_summary_pdf
     if request.method == 'POST':
-        pdf_file = request.files.get('pdf_file')
+        pdf_file = request.files['pdf_file']
         if pdf_file and pdf_file.filename.endswith('.pdf'):
             text = extract_text_from_pdf(pdf_file)
             summary = summarize_text(text, sentence_count=7)
+            global latest_summary_pdf
             latest_summary_pdf = create_pdf(summary)
     return render_template("index.html", summary=summary)
 
@@ -58,3 +67,4 @@ def download_summary():
 
 if __name__ == '__main__':
     app.run(host="0.0.0.0", port=10000)
+
