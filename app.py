@@ -1,8 +1,15 @@
+import nltk
+
+nltk.data.path.append('./nltk_data')
+
+nltk.download('punkt')
+nltk.download('stopwords')
+nltk.download('punkt_tab')
+
 from flask import Flask, request, render_template, send_file
 import os
 import io
 import fitz  # PyMuPDF
-import nltk
 from fpdf import FPDF
 from sumy.parsers.plaintext import PlaintextParser
 from sumy.nlp.tokenizers import Tokenizer
