@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>PDF Resumer - Résumé automatique de PDF</title>
+  <style>
+    /* Reset basique */
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      color: #333;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 40px 20px;
+      animation: bgFade 8s ease-in-out infinite alternate;
+    }
+
+    @keyframes bgFade {
+      0% { background: linear-gradient(135deg, #667eea, #764ba2); }
+      100% { background: linear-gradient(135deg, #43cea2, #185a9d); }
+    }
+
+    .container {
+      background: #fff;
+      max-width: 700px;
+      width: 100%;
+      padding: 30px 40px;
+      border-radius: 12px;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+      text-align: center;
+      position: relative;
+    }
+
+    header {
+      font-size: 2.8rem;
+      font-weight: 700;
+      margin-bottom: 30px;
+      color: #4a148c;
+      letter-spacing: 2px;
+      animation: slideInDown 0.8s ease forwards;
+    }
+
+    @keyframes slideInDown {
+      0% {
+        transform: translateY(-50px);
+        opacity: 0;
+      }
+      100% {
+        transform: translateY(0);
+        opacity: 1;
+      }
+    }
+
+    form {
+      margin-bottom: 20px;
+    }
+
+    label {
+      font-weight: 600;
+      font-size: 1.1rem;
+      display: block;
+      margin-bottom: 10px;
+      color: #333;
+      text-align: left;
+    }
+
+    input[type="file"] {
+      width: 100%;
+      padding: 10px;
+      border: 2px solid #ddd;
+      border-radius: 8px;
+      transition: border-color 0.3s;
+      cursor: pointer;
+    }
+    input[type="file"]:focus,
+    input[type="file"]:hover {
+      border-color: #4a148c;
+      outline: none;
+    }
+
+    button {
+      margin-top: 20px;
+      padding: 14px 30px;
+      background-color: #4a148c;
+      border: none;
+      border-radius: 30px;
+      color: white;
+      font-size: 1.15rem;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 5px 15px rgba(74,20,140,0.4);
+      transition: background-color 0.3s ease, transform 0.3s ease;
+    }
+
+    button:hover {
+      background-color: #7b3fbf;
+      transform: scale(1.05);
+      box-shadow: 0 8px 25px rgba(123,63,191,0.6);
+    }
+
+    .result {
+      margin-top: 30px;
+      padding: 20px;
+      background-color: #fafafa;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      text-align: left;
+      max-height: 300px;
+      overflow-y: auto;
+      opacity: 0;
+      animation: fadeIn 1s forwards;
+      white-space: pre-wrap;
+      font-family: Consolas, monospace;
+      font-size: 1rem;
+      line-height: 1.5;
+      color: #222;
+    }
+
+    @keyframes fadeIn {
+      to {
+        opacity: 1;
+      }
+    }
+
+    .download-link {
+      display: inline-block;
+      margin-top: 15px;
+      color: #4a148c;
+      font-weight: 600;
+      text-decoration: none;
+      border: 2px solid #4a148c;
+      padding: 8px 18px;
+      border-radius: 25px;
+      transition: background-color 0.3s, color 0.3s;
+    }
+
+    .download-link:hover {
+      background-color: #4a148c;
+      color: white;
+    }
+
+    footer {
+      margin-top: 50px;
+      color: #ddd;
+      font-size: 0.9rem;
+      user-select: none;
+    }
+
+    /* Loader */
+    .loader {
+      border: 5px solid #f3f3f3;
+      border-top: 5px solid #4a148c;
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      animation: spin 1s linear infinite;
+      margin: 25px auto 0;
+      display: none;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg);}
+      100% { transform: rotate(360deg);}
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>PDF Resumer</header>
+
+    <form method="POST" enctype="multipart/form-data" id="pdfForm">
+      <label for="pdf_file">Choisissez un fichier PDF à résumer :</label>
+      <input type="file" id="pdf_file" name="pdf_file" accept=".pdf" required />
+      <button type="submit">Générer le résumé</button>
+    </form>
+
+    <div class="loader" id="loader"></div>
+
+    {% if summary %}
+      <section class="result" id="resultSection">
+        <h3>Résumé généré :</h3>
+        <pre>{{ summary }}</pre>
+        <a href="{{ url_for('download_pdf') }}" class="download-link" download>
+          📄 Télécharger le résumé en PDF
+        </a>
+      </section>
+    {% endif %}
+  </div>
+
+  <footer>
+    &copy; 2025 Aziz - PDF Resumer. Tous droits réservés.
+  </footer>
+
+  <script>
+    const form = document.getElementById('pdfForm');
+    const loader = document.getElementById('loader');
+    const resultSection = document.getElementById('resultSection');
+
+    form.addEventListener('submit', () => {
+      loader.style.display = 'block';
+      if(resultSection) {
+        resultSection.style.opacity = '0.3';
+      }
+    });
+
+    window.addEventListener('load', () => {
+      if(resultSection) {
+        resultSection.style.opacity = '1';
+      }
+      loader.style.display = 'none';
+    });
+  </script>
+</body>
+</html>
