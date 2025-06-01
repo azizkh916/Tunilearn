@@ -29,7 +29,10 @@ def create_pdf(summary_text):
     pdf.set_font('Arial', '', 12)
     for line in summary_text.split("\n"):
         pdf.multi_cell(0, 10, line)
+    
+    # Générer le contenu du PDF sous forme de bytes
     pdf_bytes = pdf.output(dest='S').encode('latin1')
+    
     output = io.BytesIO(pdf_bytes)
     output.seek(0)
     return output
