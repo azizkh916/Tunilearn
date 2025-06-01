@@ -64,11 +64,18 @@ def index():
             latest_summary_pdf = create_pdf(summary)
     return render_template("index.html", summary=summary)
 
-@app.route('/download')
-def download_pdf():
-    if latest_summary_pdf:
-        return send_file(latest_summary_pdf, as_attachment=True, download_name="resume.pdf", mimetype='application/pdf')
-    return "Aucun résumé disponible."
+from flask import Flask, request, jsonify, send_from_directory
 
-if __name__ == '__main__':
-    app.run(debug=True)
+app = Flask(__name__, static_folder="static")
+
+@app.route("/")
+def index():
+    return send_from_directory("static", "index.html")
+
+@app.route("/generate-summary", methods=["POST"])
+def summarize():
+    return jsonify({"summary": "Résumé généré avec succès."})
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=10000)
+
