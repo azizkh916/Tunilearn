@@ -17,6 +17,11 @@ app = Flask(__name__)
 
 LANGUAGE = "french"
 latest_summary_pdf = None
+import re
+
+def clean_text(text):
+    # Supprimer les caractères non supportés par Latin-1 (comme les emojis)
+    return re.sub(r'[^\x00-\xff]', '', text)
 
 def extract_text_from_pdf(pdf_file):
     text = ""
@@ -32,19 +37,16 @@ def summarize_text(text, sentence_count=5):
     summarizer.stop_words = get_stop_words(LANGUAGE)
     summary = summarizer(parser.document, sentence_count)
     return "\n".join(str(sentence) for sentence in summary)
-
 def create_pdf(summary_text):
     pdf = FPDF()
     pdf.add_page()
-    # S'assurer que DejaVuSans.ttf est dans le dossier du script
+
     pdf.add_font('DejaVu', '', 'DejaVuSans.ttf', uni=True)
-    pdf.set_font('DejaVu', '', 12)
-    for line in summary_text.split("\n"):
-        pdf.multi_cell(0, 10, line)
-    pdf_bytes = pdf.output(dest='S').encode('utf-8')
-    output = io.BytesIO(pdf_bytes)
-    output.seek(0)
-    return output
+    pdf.set_font('DejaVu', '', 14)
+    pdf.multi_cell(0, 10, clean_text(summary_text))  # nettoyer ici
+
+    return BytesIO(pdf.output(dest='S').encode('latin1'))
+
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
